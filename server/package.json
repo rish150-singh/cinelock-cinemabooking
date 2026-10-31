@@ -1,0 +1,40 @@
+{
+  "name": "cinelock-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "build": "node --check src/index.js && node --check src/app.js && node --check src/reservations.js",
+    "start": "node src/index.js",
+    "db:migrate": "node scripts/prisma.js migrate deploy",
+    "db:seed": "node scripts/prisma.js db seed",
+    "db:generate": "node scripts/prisma.js generate",
+    "test": "vitest run tests/integration",
+    "test:load": "k6 run tests/load/reservations.js",
+    "db:migration:create": "node scripts/prisma.js migrate dev",
+    "postinstall": "node scripts/prisma.js generate"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "bullmq": "^5.34.10",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "ioredis": "^5.4.2",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.8.1",
+    "zod": "^3.24.1",
+    "@prisma/client": "^6.19.0"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8",
+    "supertest": "^7.0.0",
+    "prisma": "^6.19.0"
+  },
+  "prisma": {
+    "seed": "node src/seed.js"
+  }
+}

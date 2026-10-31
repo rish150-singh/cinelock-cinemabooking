@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  role         String        @default("USER")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  movies       Movie[]       @relation("MovieCreator")
+  reservations Reservation[]
+  @@map("users")
+}
+
+model Movie {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title     String
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  createdBy String?       @map("created_by") @db.Uuid
+  creator   User?         @relation("MovieCreator", fields: [createdBy], references: [id])
+  showSeats ShowSeat[]
+  reservations Reservation[]
+  @@map("movies")
+}
+
+model Seat {
+  id         Int        @id @db.SmallInt
+  rowLabel   String     @map("row_label") @db.Char(1)
+  seatNumber Int        @map("seat_number") @db.SmallInt
+  showSeats  ShowSeat[]
+  @@unique([rowLabel, seatNumber])
+  @@map("seats")
+}
+
+model ShowSeat {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  movieId      String            @map("movie_id") @db.Uuid
+  seatId       Int               @map("seat_id") @db.SmallInt
+  status       String            @default("AVAILABLE")
+  holdId       String?           @map("hold_id") @db.Uuid
+  movie        Movie             @relation(fields: [movieId], references: [id])
+  seat         Seat              @relation(fields: [seatId], references: [id])
+  hold         Reservation?      @relation("ActiveHold", fields: [holdId], references: [id])
+  reservationSeats ReservationSeat[]
+  @@unique([movieId, seatId])
+  @@index([movieId, status])
+  @@map("show_seats")
+}
+
+model Reservation {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String            @map("user_id") @db.Uuid
+  movieId         String            @map("movie_id") @db.Uuid
+  status          String
+  expiresAt       DateTime          @map("expires_at") @db.Timestamptz(6)
+  idempotencyKey  String            @map("idempotency_key")
+  bookingReference String?          @unique @map("booking_reference")
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  confirmedAt     DateTime?         @map("confirmed_at") @db.Timestamptz(6)
+  user            User              @relation(fields: [userId], references: [id])
+  movie           Movie             @relation(fields: [movieId], references: [id])
+  heldSeats       ShowSeat[]        @relation("ActiveHold")
+  seats           ReservationSeat[]
+  payment         Payment?
+  @@unique([userId, idempotencyKey])
+  @@index([userId, createdAt])
+  @@map("reservations")
+}
+
+model ReservationSeat {
+  reservationId String      @map("reservation_id") @db.Uuid
+  showSeatId    String      @map("show_seat_id") @db.Uuid
+  seatPrice     Int         @default(1200) @map("seat_price")
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  showSeat      ShowSeat    @relation(fields: [showSeatId], references: [id])
+  @@id([reservationId, showSeatId])
+  @@unique([showSeatId])
+  @@map("reservation_seats")
+}
+
+model Payment {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  reservationId    String      @unique @map("reservation_id") @db.Uuid
+  status           String
+  amount           Int
+  paymentReference String      @unique @map("payment_reference")
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  reservation      Reservation @relation(fields: [reservationId], references: [id])
+  @@map("payments")
+}
